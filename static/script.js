@@ -1,7 +1,64 @@
 document.addEventListener('DOMContentLoaded', function() {
     const bookForm = document.getElementById('bookForm');
     const booksTableBody = document.getElementById('booksTable').querySelector('tbody');
-    const socket = new WebSocket('ws://localhosr:8080/ws');
+    const socket = new WebSocket('ws://localhost:8080/ws');
+
+    const registerForm = document.getElementById('registerForm');
+    registerForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        const username = document.getElementById('registerUsername').value;
+        const password = document.getElementById('registerPassword').value;
+
+        const user = {
+            username: username,
+            password: password
+        };
+
+        fetch('/users/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(user)
+        }).then(response => {
+            if (response.ok) {
+                alert('Registration successful');
+                registerForm.reset();
+            } else {
+                alert('Failed to register');
+            }
+        });
+    });
+
+    const loginForm = document.getElementById('loginForm');
+    loginForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        const username = document.getElementById('loginUsername').value;
+        const password = document.getElementById('loginPassword').value;
+
+        const credentials = {
+            username: username,
+            password: password
+        };
+
+        fetch('/users/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(credentials)
+        }).then(response => {
+            if (response.ok) {
+                alert('Login successful');
+                loginForm.reset();
+                window.location.href = '/dashboard'; // Redirect or update UI
+            } else {
+                alert('Failed to login');
+            }
+        });
+    });
 
     socket.onmessage = function(event) {
         const book = JSON.parse(event.data);
@@ -20,7 +77,8 @@ document.addEventListener('DOMContentLoaded', function() {
             <td>${book.rating}</td>
             <td>
                 <button onclick="deleteBook(${book.id})">Delete</button>
-            </td>
+            </td>	r.HandleFunc("/register", RegisterHandler).Methods("POST")
+	r.HandleFunc("/login", LoginHandler).Methods("POST")
         `;
     }
 

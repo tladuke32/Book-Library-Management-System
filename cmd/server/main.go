@@ -28,14 +28,14 @@ func main() {
 	}
 
 	r := mux.NewRouter()
+	r.HandleFunc("/register", RegisterHandler).Methods("POST")
+	r.HandleFunc("/login", LoginHandler).Methods("POST")
 	r.HandleFunc("/", HomeHandler).Methods("GET")
 	r.HandleFunc("/books", GetBooksHandler).Methods("GET")
 	r.HandleFunc("/books", CreateBookHandler).Methods("POST")
 	r.HandleFunc("/books/{id:[0-9]+}", UpdateBookHandler).Methods("PUT")
 	r.HandleFunc("/books/{id:[0-9]+}", DeleteBookHandler).Methods("DELETE")
 	r.HandleFunc("/import-books", ImportBooksHandler).Methods("GET")
-	r.HandleFunc("/register", RegisterHandler).Methods("POST")
-	r.HandleFunc("/login", LoginHandler).Methods("POST")
 	r.HandleFunc("/logout", LogoutHandler).Methods("POST")
 	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
 
