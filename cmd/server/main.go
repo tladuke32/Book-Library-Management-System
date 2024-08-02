@@ -29,17 +29,17 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/register", RegisterHandler).Methods("POST")
 	r.HandleFunc("/login", LoginHandler).Methods("POST")
+	r.HandleFunc("/", HomeHandler).Methods("GET")
+	r.HandleFunc("/logout", LogoutHandler).Methods("POST")
 
 	apiRouter := r.PathPrefix("/api").Subrouter()
 	apiRouter.Use(AuthMiddleware)
-	apiRouter.HandleFunc("/", HomeHandler).Methods("GET")
 	apiRouter.HandleFunc("/books", GetBooksHandler).Methods("GET")
 	apiRouter.HandleFunc("/books", CreateBookHandler).Methods("POST")
 	apiRouter.HandleFunc("/books/{id:[0-9]+}", UpdateBookHandler).Methods("PUT")
 	apiRouter.HandleFunc("/books/{id:[0-9]+}", DeleteBookHandler).Methods("DELETE")
 	apiRouter.HandleFunc("/import-books", ImportBooksHandler).Methods("GET")
-	apiRouter.HandleFunc("/logout", LogoutHandler).Methods("POST")
-
+	apiRouter.HandleFunc("/book", HandleNotifyClients).Methods("POST")
 	apiRouter.HandleFunc("/ws", api.HandleConnections)
 
 	r.PathPrefix("/static").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
@@ -51,6 +51,17 @@ func main() {
 	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func HandleNotifyClients(w http.ResponseWriter, r *http.Request) {
+	var book models.Book
+	if err := json.NewDecoder(r.Body).Decode(&book); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	api.NotifyClients(book)
+	w.WriteHeader(http.StatusOK)
 }
 
 func HomeHandler(w http.ResponseWriter, r *http.Request) {
@@ -92,7 +103,7 @@ func CreateBookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusCreated)
 
-	api.NotifyClients(book)
+	go api.NotifyClients(book)
 	go api.HandleMessages()
 }
 

@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
             rating: rating
         };
 
-        fetch('api/books', {
+        fetch('/api/books', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
