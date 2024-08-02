@@ -59,12 +59,17 @@ func CreateSessionTable(db *sql.DB) error {
 }
 
 func CreateBookTable(db *sql.DB) error {
-	createBookTableSQL := `CREATE TABLE IF NOT EXISTS books (
-	    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-	    "title" TEXT,
-	    "author" TEXT,
-	    "published_date" TEXT,
-	    "isbn" TEXT
+	createBookTableSQL := `
+	CREATE TABLE IF NOT EXISTS books (
+	    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+	    title TEXT,
+	    author TEXT,
+	    published_date TEXT,
+	    isbn TEXT,
+	    categories TEXT,
+	    rating INTEGER,
+		user_id INTEGER,
+		FOREIGN KEY(user_id) REFERENCES users(id)                            
 	);`
 
 	log.Println("Creating book table...")
@@ -83,7 +88,7 @@ func CreateBookTable(db *sql.DB) error {
 }
 
 func InsertBook(db *sql.DB, book models.Book) error {
-	insertBookSQL := `INSERT INTO books (title, author, published_date, isbn, categories, rating) VALUES (?, ?, ?, ?)`
+	insertBookSQL := `INSERT INTO books (title, author, published_date, isbn) VALUES (?, ?, ?, ?)`
 	statement, err := db.Prepare(insertBookSQL)
 	if err != nil {
 		return err
@@ -93,7 +98,7 @@ func InsertBook(db *sql.DB, book models.Book) error {
 }
 
 func GetBooks(db *sql.DB) ([]models.Book, error) {
-	row, err := db.Query("SELECT id, title, author, published_date, isbn, categories, rating FROM books")
+	row, err := db.Query("SELECT id, title, author, published_date, isbn FROM books")
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +115,7 @@ func GetBooks(db *sql.DB) ([]models.Book, error) {
 }
 
 func UpdateBook(db *sql.DB, book models.Book) error {
-	updateBookSQL := `UPDATE books SET title = ?, author = ?, published_date = ?, isbn = ?, categories = ?, rating = ? WHERE id = ?`
+	updateBookSQL := `UPDATE books SET title = ?, author = ?, published_date = ?, isbn = ? WHERE id = ?`
 	statement, err := db.Prepare(updateBookSQL)
 	if err != nil {
 		return err
