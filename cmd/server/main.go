@@ -5,7 +5,6 @@ import (
 	"Book-Library-Management-System/internal/auth"
 	"Book-Library-Management-System/internal/db"
 	"Book-Library-Management-System/internal/models"
-
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -30,24 +29,27 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/register", RegisterHandler).Methods("POST")
 	r.HandleFunc("/login", LoginHandler).Methods("POST")
-	r.HandleFunc("/", HomeHandler).Methods("GET")
-	r.HandleFunc("/books", GetBooksHandler).Methods("GET")
-	r.HandleFunc("/books", CreateBookHandler).Methods("POST")
-	r.HandleFunc("/books/{id:[0-9]+}", UpdateBookHandler).Methods("PUT")
-	r.HandleFunc("/books/{id:[0-9]+}", DeleteBookHandler).Methods("DELETE")
-	r.HandleFunc("/import-books", ImportBooksHandler).Methods("GET")
-	r.HandleFunc("/logout", LogoutHandler).Methods("POST")
-	r.PathPrefix("/static/").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
 
-	go api.HandleMessages()
+	apiRouter := r.PathPrefix("/api").Subrouter()
+	apiRouter.Use(AuthMiddleware)
+	apiRouter.HandleFunc("/", HomeHandler).Methods("GET")
+	apiRouter.HandleFunc("/books", GetBooksHandler).Methods("GET")
+	apiRouter.HandleFunc("/books", CreateBookHandler).Methods("POST")
+	apiRouter.HandleFunc("/books/{id:[0-9]+}", UpdateBookHandler).Methods("PUT")
+	apiRouter.HandleFunc("/books/{id:[0-9]+}", DeleteBookHandler).Methods("DELETE")
+	apiRouter.HandleFunc("/import-books", ImportBooksHandler).Methods("GET")
+	apiRouter.HandleFunc("/logout", LogoutHandler).Methods("POST")
 
-	r.HandleFunc("/ws", api.HandleConnections)
+	apiRouter.HandleFunc("/ws", api.HandleConnections)
+
+	r.PathPrefix("/static").Handler(http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
+
 	log.Println("Setting up HTTP server...")
 	http.Handle("/", r)
 
 	log.Println("Server is running on port 8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatal(http.ListenAndServe(":8080", nil))
+		log.Fatal(err)
 	}
 }
 
@@ -65,7 +67,6 @@ func GetBooksHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func CreateBookHandler(w http.ResponseWriter, r *http.Request) {
-
 	userID, err := auth.GetUserIDFromSession(r)
 	if err != nil {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -78,7 +79,6 @@ func CreateBookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	book.UserID = userID
-
 	book.Categories = r.FormValue("categories")
 	rating, err := strconv.Atoi(r.FormValue("rating"))
 	if err != nil {
@@ -91,6 +91,9 @@ func CreateBookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
+
+	api.NotifyClients(book)
+	go api.HandleMessages()
 }
 
 func UpdateBookHandler(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +110,6 @@ func UpdateBookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	book.ID = id
-
 	book.Categories = r.FormValue("categories")
 	rating, err := strconv.Atoi(r.FormValue("rating"))
 	if err != nil {
@@ -219,4 +221,14 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
+}
+
+func AuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := auth.GetUserIDFromSession(r); err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }

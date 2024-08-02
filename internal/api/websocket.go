@@ -4,6 +4,7 @@ import (
 	"Book-Library-Management-System/internal/models"
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/websocket"
 )
@@ -13,7 +14,11 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-var clients = make(map[*websocket.Conn]bool)
+var (
+	clients   = make(map[*websocket.Conn]bool)
+	clientsMu sync.Mutex
+)
+
 var broadcast = make(chan models.Book)
 
 func HandleConnections(w http.ResponseWriter, r *http.Request) {
@@ -23,14 +28,14 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	}
 	defer ws.Close()
 
-	clients[ws] = true
+	RegisterClient(ws)
 
 	for {
 		var book models.Book
 		err := ws.ReadJSON(&book)
 		if err != nil {
 			log.Printf("error: %v", err)
-			delete(clients, ws)
+			UnregisterClient(ws)
 			break
 		}
 		broadcast <- book
@@ -40,13 +45,30 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 func HandleMessages() {
 	for {
 		book := <-broadcast
-		for client := range clients {
-			err := client.WriteJSON(book)
-			if err != nil {
-				log.Printf("error: %v", err)
-				client.Close()
-				delete(clients, client)
-			}
+		NotifyClients(book)
+	}
+}
+
+func RegisterClient(conn *websocket.Conn) {
+	clientsMu.Lock()
+	defer clientsMu.Unlock()
+	clients[conn] = true
+}
+
+func UnregisterClient(conn *websocket.Conn) {
+	clientsMu.Lock()
+	defer clientsMu.Unlock()
+	delete(clients, conn)
+}
+
+func NotifyClients(book models.Book) {
+	clientsMu.Lock()
+	defer clientsMu.Unlock()
+	for client := range clients {
+		err := client.WriteJSON(book)
+		if err != nil {
+			client.Close()
+			delete(clients, client)
 		}
 	}
 }

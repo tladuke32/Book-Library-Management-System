@@ -1,9 +1,10 @@
 document.addEventListener('DOMContentLoaded', function() {
+    const registerForm = document.getElementById('registerForm');
+    const loginForm = document.getElementById(`loginForm`);
     const bookForm = document.getElementById('bookForm');
     const booksTableBody = document.getElementById('booksTable').querySelector('tbody');
     const socket = new WebSocket('ws://localhost:8080/ws');
 
-    const registerForm = document.getElementById('registerForm');
     registerForm.addEventListener('submit', function(event) {
         event.preventDefault();
 
@@ -15,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
             password: password
         };
 
-        fetch('/users/register', {
+        fetch('/register', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -31,19 +32,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    const loginForm = document.getElementById('loginForm');
     loginForm.addEventListener('submit', function(event) {
         event.preventDefault();
 
         const username = document.getElementById('loginUsername').value;
         const password = document.getElementById('loginPassword').value;
 
-        const credentials = {
+        const credentials= {
             username: username,
             password: password
         };
 
-        fetch('/users/login', {
+        fetch('/login', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -77,8 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <td>${book.rating}</td>
             <td>
                 <button onclick="deleteBook(${book.id})">Delete</button>
-            </td>	r.HandleFunc("/register", RegisterHandler).Methods("POST")
-	r.HandleFunc("/login", LoginHandler).Methods("POST")
+            </td>
         `;
     }
 
@@ -89,15 +88,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const author = document.getElementById('author').value;
         const publishedDate = document.getElementById('publishedDate').value;
         const isbn = document.getElementById('isbn').value;
+        const categories = document.getElementById('categories').value;
+        const rating = document.getElementById('rating').value;
 
         const book = {
             title: title,
             author: author,
             published_date: publishedDate,
-            isbn: isbn
+            isbn: isbn,
+            categories: categories,
+            rating: rating
         };
 
-        fetch('/books', {
+        fetch('api/books', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -114,7 +117,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     function loadBooks() {
-        fetch('/books')
+        fetch('/api/books')
             .then(response => response.json())
             .then(books => {
                 booksTableBody.innerHTML = '';
@@ -126,6 +129,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td>${book.author}</td>
                         <td>${book.published_date}</td>
                         <td>${book.isbn}</td>
+                        <td>${book.categories}</td>
+                        <td>${book.rating}</td>
                         <td>
                             <button onclick="deleteBook(${book.id})">Delete</button>
                         </td>
@@ -135,7 +140,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     window.deleteBook = function(id) {
-        fetch(`/books/${id}`, {
+        fetch(`/api/books/${id}`, {
             method: 'DELETE'
         }).then(response => {
             if (response.status === 200) {
