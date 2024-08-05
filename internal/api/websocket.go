@@ -10,6 +10,9 @@ import (
 )
 
 var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 }
@@ -21,10 +24,31 @@ var (
 
 var broadcast = make(chan models.Book)
 
+func wsEndpoint(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("Client connected")
+	defer conn.Close()
+
+	for {
+		_, msg, err := conn.ReadMessage()
+		if err != nil {
+			log.Println("Read error:", err)
+			break
+		}
+		log.Printf("Received: %s", msg)
+	}
+}
+
 func HandleConnections(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("error upgrading to websocket: %v", err)
+		http.Error(w, "Could not open websocket connection", http.StatusBadRequest)
+		return
 	}
 	defer ws.Close()
 
@@ -67,6 +91,7 @@ func NotifyClients(book models.Book) {
 	for client := range clients {
 		err := client.WriteJSON(book)
 		if err != nil {
+			log.Printf("error writing JSON to client: %v", err)
 			client.Close()
 			delete(clients, client)
 		}

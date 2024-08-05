@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 const GoogleBooksAPI = "https://www.googleapis.com/books/v1/volumes?q="
@@ -15,9 +16,9 @@ const GoogleBooksAPI = "https://www.googleapis.com/books/v1/volumes?q="
 type GoogleBooksResponse struct {
 	Items []struct {
 		VolumeInfo struct {
-			Title               string   `json:"title"`
-			Authors             []string `json:"authors"`
-			PublishedDate       string   `json:"publishedDate"`
+			Title               string    `json:"title"`
+			Authors             []string  `json:"authors"`
+			PublishedDate       time.Time `json:"publishedDate"`
 			IndustryIdentifiers []struct {
 				Type       string `json:"type"`
 				Identifier string `json:"identifier"`

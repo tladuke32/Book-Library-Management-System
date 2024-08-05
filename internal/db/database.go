@@ -93,24 +93,25 @@ func InsertBook(db *sql.DB, book models.Book) error {
 	if err != nil {
 		return err
 	}
-	_, err = statement.Exec(book.Title, book.Author, book.PublishedDate, book.ISBN)
+	_, err = statement.Exec(book.Title, book.Author, book.PublishedDate, book.ISBN, book.Categories, book.Rating, book.UserID)
 	return err
 }
 
-func GetBooks(db *sql.DB) ([]models.Book, error) {
-	row, err := db.Query("SELECT id, title, author, published_date, isbn FROM books")
+func GetBooksByUserID(db *sql.DB, userID int) ([]models.Book, error) {
+	rows, err := db.Query(`SELECT id, title, author, published_date, isbn FROM books`, userID)
 	if err != nil {
 		return nil, err
 	}
-	defer row.Close()
+	defer rows.Close()
 
 	var books []models.Book
-	for row.Next() {
+	for rows.Next() {
 		var book models.Book
-		row.Scan(&book.ID, &book.Title, &book.Author, &book.PublishedDate, &book.ISBN)
+		if err := rows.Scan(&book.ID, &book.Title, &book.Author, &book.PublishedDate, &book.ISBN, &book.Categories, &book.Rating); err != nil {
+			return nil, err
+		}
 		books = append(books, book)
 	}
-
 	return books, nil
 }
 
@@ -120,16 +121,11 @@ func UpdateBook(db *sql.DB, book models.Book) error {
 	if err != nil {
 		return err
 	}
-	_, err = statement.Exec(book.Title, book.Author, book.PublishedDate, book.ISBN, book.ID)
+	_, err = statement.Exec(book.Title, book.Author, book.PublishedDate, book.ISBN, book.Categories, book.Rating, book.ID, book.UserID)
 	return err
 }
 
-func DeleteBook(db *sql.DB, id int) error {
-	deleteBookSQL := `DELETE FROM books WHERE id = ?`
-	statement, err := db.Prepare(deleteBookSQL)
-	if err != nil {
-		return err
-	}
-	_, err = statement.Exec(id)
+func DeleteBookByUser(db *sql.DB, id int, userID int) error {
+	_, err := db.Exec(`DELETE FROM books WHERE id = ?`, id, userID)
 	return err
 }
